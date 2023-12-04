@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "time-interval"
+version = "0.1.0"
+description = ""
+authors = ["Daniel Suen <ttdsuen@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^3.0.2"
+pytest = "^7.4.3"
+coverage = "^7.3.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
