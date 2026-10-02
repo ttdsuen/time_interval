@@ -1,18 +1,38 @@
 [tool.poetry]
 name = "time-interval"
 version = "0.1.0"
-description = ""
+description = "An abstract data type for time intervals, with a canonical empty interval for the no-overlap case."
 authors = ["Daniel Suen <ttdsuen@gmail.com>"]
 readme = "README.md"
+license = "MIT"
+keywords = ["time", "interval", "overlap", "intersection", "datetime", "abstract-data-type"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+packages = [{ include = "time_interval", from = "src" }]
+
+[tool.poetry.urls]
+Repository = "https://github.com/ttdsuen/time_interval"
+"Bug Tracker" = "https://github.com/ttdsuen/time_interval/issues"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.0.2"
 pytest = "^7.4.3"
 coverage = "^7.3.2"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [build-system]
 requires = ["poetry-core"]

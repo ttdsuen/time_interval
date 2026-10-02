@@ -3,17 +3,19 @@ from datetime import datetime, timedelta
 from dataclasses import dataclass
 
 
-def create_empty_time_interval() -> "TimeInterval":
-    """Create an instance of empty TimeInterval."""
-    now = datetime.now()
-    time_interval = TimeInterval(now, now + timedelta(seconds=10))
-    time_interval.begin, time_interval.end = time_interval.end, time_interval.begin
-    return time_interval
-
-
-@dataclass(eq=False)
+@dataclass(eq=False, frozen=True)
 class TimeInterval:
-    """Implementation of TimeInterval concept."""
+    """Implementation of TimeInterval concept.
+
+    Instances are immutable (``frozen=True``).
+
+    The class invariant is ``begin <= end``, enforced by ``__post_init__``.
+    The empty interval -- the absence of a range, i.e. the result of
+    intersecting two disjoint intervals -- cannot satisfy that invariant, so
+    it is not reachable through the public constructor. It is instead the
+    single module-level ``EMPTY`` singleton (see ``_make_empty``), which the
+    class treats as a distinct case in ``is_empty``/``__eq__``.
+    """
 
     begin: datetime
     end: datetime
@@ -22,43 +24,22 @@ class TimeInterval:
         if self.end < self.begin:
             raise ValueError("invalid time interval, end >= begin")
 
-    #
-    # ref_time_interval - the longer of self and ti,
-    # match_time_interval - the one different from ref_time_interval
-    # Overlapping happens when either endpoints of
-    # match_time_interval fall within ref_time_interval
     def intersection(self, ti: "TimeInterval") -> "TimeInterval":
-        """Implements intersection on TimeIntervals."""
-        try:
-            ref_time_interval = self
-            match_time_interval = ti
-            if self.span() < ti.span():
-                ref_time_interval = ti
-                match_time_interval = self
+        """Return the overlap of ``self`` and ``ti``.
 
-            if (
-                ref_time_interval.begin
-                <= match_time_interval.begin
-                <= ref_time_interval.end
-            ):
-                # ref.begin <= match_time_interval.begin <= ref.end
-                if match_time_interval.end <= ref_time_interval.end:
-                    return match_time_interval
-                return TimeInterval(match_time_interval.begin, ref_time_interval.end)
-            if (
-                ref_time_interval.begin
-                <= match_time_interval.end
-                <= ref_time_interval.end
-            ):
-                # ref.begin <= match_time_interval.end <= ref.end
-                return TimeInterval(
-                    ref_time_interval.begin, match_time_interval.end
-                )
-            return create_empty_time_interval()
-        except ValueError:
-            # calling span() raises this exception if time interval is empty
-            # and overlapping would be an empty time interval as well
-            return create_empty_time_interval()
+        The intersection is the interval with the latest begin and the
+        earliest end. Empty is absorbing: intersecting anything with an empty
+        interval yields empty. Disjoint (or merely non-overlapping) intervals
+        also yield empty. Intervals that touch at a single endpoint yield the
+        degenerate point interval ``(t, t)``, which is *not* empty.
+        """
+        if self.is_empty() or ti.is_empty():
+            return EMPTY
+        begin = max(self.begin, ti.begin)
+        end = min(self.end, ti.end)
+        if begin > end:
+            return EMPTY
+        return TimeInterval(begin, end)
 
     def span(self) -> timedelta:
         """Returns length of TimeInterval as datetime.timedelta.
@@ -80,3 +61,35 @@ class TimeInterval:
                 return False
             return self.begin == other.begin and self.end == other.end
         return False
+
+    def __hash__(self) -> int:
+        # Must agree with __eq__: every empty interval compares equal, so all
+        # empties share one hash; non-empty intervals hash by their endpoints.
+        if self.is_empty():
+            return hash(())
+        return hash((self.begin, self.end))
+
+
+def _make_empty() -> TimeInterval:
+    """Build the one sanctioned empty TimeInterval.
+
+    ``begin <= end`` is the class invariant, so an empty value (``begin >
+    end``) cannot come through the validated constructor. It is constructed
+    here, deliberately, bypassing both ``__init__``/``__post_init__`` and the
+    frozen ``__setattr__``. All empties compare equal (see ``__eq__``), so a
+    single shared instance is sufficient.
+    """
+    obj = object.__new__(TimeInterval)
+    object.__setattr__(obj, "begin", datetime.max)
+    object.__setattr__(obj, "end", datetime.min)
+    return obj
+
+
+#: The canonical empty interval. Returned by every operation that has no
+#: valid overlap, and absorbing under ``intersection``.
+EMPTY = _make_empty()
+
+
+def create_empty_time_interval() -> TimeInterval:
+    """Return the canonical empty TimeInterval."""
+    return EMPTY
